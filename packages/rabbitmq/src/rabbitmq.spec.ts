@@ -1,4 +1,4 @@
-import { Injectable, Module } from '@nestjs/common';
+import { Controller, Injectable, Module } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { AmqpConnection } from './amqp/AmqpConnection';
 import { RabbitRPC, RabbitSubscribe } from './rabbitmq.decorators';
@@ -19,8 +19,24 @@ class ExampleService {
   subscribeMethod() {}
 }
 
+@Controller('example-controller')
+class ExampleController {
+  @RabbitRPC({
+    routingKey: 'rpc',
+    exchange: 'exchange3'
+  })
+  rpcMethod() {}
+
+  @RabbitSubscribe({
+    routingKey: 'subscribe',
+    exchange: 'exchange4'
+  })
+  controllerSubscribeMethod() {}
+}
+
 @Module({
-  providers: [ExampleService]
+  providers: [ExampleService],
+  controllers: [ExampleController]
 })
 class ExampleModule {}
 
@@ -44,12 +60,17 @@ describe('RabbitMQ', () => {
   });
 
   it('should register rabbit rpc handlers', async () => {
-    expect(amqpMock.createRpc).toBeCalledWith(expect.any(Function), {
+    expect(amqpMock.createRpc).toHaveBeenCalledWith(expect.any(Function), {
       exchange: 'exchange1',
       routingKey: 'rpc'
     });
 
-    expect(amqpMock.createRpc).toBeCalledTimes(1);
+    expect(amqpMock.createRpc).toHaveBeenCalledWith(expect.any(Function), {
+      exchange: 'exchange3',
+      routingKey: 'rpc'
+    });
+
+    expect(amqpMock.createRpc).toBeCalledTimes(2);
   });
 
   it('should register rabbit subscribe handlers', async () => {
@@ -57,5 +78,12 @@ describe('RabbitMQ', () => {
       exchange: 'exchange2',
       routingKey: 'subscribe'
     });
+
+    expect(amqpMock.createSubscriber).toBeCalledWith(expect.any(Function), {
+      exchange: 'exchange4',
+      routingKey: 'subscribe'
+    });
+
+    expect(amqpMock.createSubscriber).toBeCalledTimes(2);
   });
 });

@@ -36,12 +36,17 @@ export class RabbitMQModule implements OnModuleInit {
   }
 
   public async onModuleInit() {
-    const rabbitMeta = await this.discover.providerMethodsWithMetaAtKey<
+    const rabbitProviderMeta = await this.discover.providerMethodsWithMetaAtKey<
+      RabbitHandlerConfig
+    >(RABBIT_HANDLER);
+    const rabbitControllerMeta = await this.discover.controllerMethodsWithMetaAtKey<
       RabbitHandlerConfig
     >(RABBIT_HANDLER);
 
+    const combinedRabbitMeta = rabbitControllerMeta.concat(rabbitProviderMeta);
+
     const grouped = groupBy(
-      rabbitMeta,
+      combinedRabbitMeta,
       x => x.discoveredMethod.parentClass.name
     );
 
